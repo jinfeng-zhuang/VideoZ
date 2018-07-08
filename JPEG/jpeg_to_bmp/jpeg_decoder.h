@@ -38,7 +38,7 @@ enum {
 	HUFFMAN_TREE_ID_1 = 1
 };
 
-extern int decompress_jpeg(uint8_t *buffer, uint32_t length, struct jpeg_section **sections, uint32_t *number);
+extern int decompress_jpeg(uint8_t *buffer, uint32_t length, struct jpeg_section *info);
 
 extern int jpeg_sof_decode(uint8_t *buffer, uint32_t length);
 extern int jpeg_dht_decode(uint8_t *buffer, uint32_t length, struct huffman_db *huffman_table);

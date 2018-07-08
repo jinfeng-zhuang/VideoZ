@@ -14,6 +14,8 @@
 
 #include "jpeg_decoder.h"
 
+#include "config.h"
+
 #define BIGENDIAN_16(x) (((x>>8)&0xFF) | ((x&0xFF)<<8))
 
 extern int output(uint8_t *matrix);

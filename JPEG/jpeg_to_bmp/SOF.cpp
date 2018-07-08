@@ -13,7 +13,7 @@ int jpeg_sof_decode(uint8_t *buffer, uint32_t length)
 	assert(sof->color_component_array[1].h_sample == 1);
 	assert(sof->color_component_array[2].h_sample == 1);
 
-	printf("[SOF] precision: %d width = %d height = %d\n", sof->precision, BIGENDIAN_16(sof->width), BIGENDIAN_16(sof->height));
+	printf("[SOF] Precision: %d, Width : %d, Height : %d\n", sof->precision, BIGENDIAN_16(sof->width), BIGENDIAN_16(sof->height));
 	
 
 	return 0;

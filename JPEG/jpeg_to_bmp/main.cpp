@@ -9,6 +9,8 @@
 #define FRAME_SIZE		(FRAME_WIDTH * FRAME_HEIGHT * 3)
 uint8_t frame[FRAME_SIZE] = { 0 };
 
+static struct jpeg_section jpeg_section_array[CONFIG_JPEG_SECTION_NUMBER];
+
 // assume
 // put 16x16 block to a container
 // unit = 3
@@ -79,39 +81,36 @@ int _tmain(int argc, _TCHAR* argv[])
 	uint8_t *buffer = NULL;
 	uint32_t length = 0;
 
-	struct jpeg_section *sections = NULL;
-	uint32_t section_number = 0;
-
 	ret = load_file("test.jpg", &buffer, &length);
 	assert(0 == ret);
 
-	ret = decompress_jpeg(buffer, length, &sections, &section_number);
+	ret = decompress_jpeg(buffer, length, jpeg_section_array);
 	assert(0 == ret);
 
-	for (uint32_t i = 0; i < section_number; i++) {
-		if (JPEG_SECTION_SOF == sections[i].type) {
-			ret = jpeg_sof_decode(sections[i].buffer, sections[i].length);
+	for (uint32_t i = 0; i < CONFIG_JPEG_SECTION_NUMBER; i++) {
+		if (JPEG_SECTION_SOF == jpeg_section_array[i].type) {
+			ret = jpeg_sof_decode(jpeg_section_array[i].buffer, jpeg_section_array[i].length);
 			assert(0 == ret);
 		}
 	}
 
-	for (uint32_t i = 0; i < section_number; i++) {
-		if (JPEG_SECTION_DQT == sections[i].type) {
-			ret = jpeg_dqt_decode(sections[i].buffer, sections[i].length);
+	for (uint32_t i = 0; i < CONFIG_JPEG_SECTION_NUMBER; i++) {
+		if (JPEG_SECTION_DQT == jpeg_section_array[i].type) {
+			ret = jpeg_dqt_decode(jpeg_section_array[i].buffer, jpeg_section_array[i].length);
 			assert(0 == ret);
 		}
 	}
 
-	for (uint32_t i = 0; i < section_number; i++) {
-		if (JPEG_SECTION_DHT == sections[i].type) {
-			ret = jpeg_dht_decode(sections[i].buffer, sections[i].length, &huffman_table);
+	for (uint32_t i = 0; i < CONFIG_JPEG_SECTION_NUMBER; i++) {
+		if (JPEG_SECTION_DHT == jpeg_section_array[i].type) {
+			ret = jpeg_dht_decode(jpeg_section_array[i].buffer, jpeg_section_array[i].length, &huffman_table);
 			assert(0 == ret);
 		}
 	}
 
-	for (uint32_t i = 0; i < section_number; i++) {
-		if (JPEG_SECTION_SOS == sections[i].type) {
-			ret = jpeg_sos_decode(sections[i].buffer, sections[i].length);
+	for (uint32_t i = 0; i < CONFIG_JPEG_SECTION_NUMBER; i++) {
+		if (JPEG_SECTION_SOS == jpeg_section_array[i].type) {
+			ret = jpeg_sos_decode(jpeg_section_array[i].buffer, jpeg_section_array[i].length);
 			assert(0 == ret);
 		}
 	}

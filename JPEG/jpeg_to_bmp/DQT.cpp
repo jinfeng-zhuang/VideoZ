@@ -50,6 +50,8 @@ int jpeg_dqt_decode(uint8_t *buffer, uint32_t length)
 	id = dqt->table[0].id;
 	assert(id < 4);
 
+	printf("[JPEG DQT] ID : %d\n", id);
+
 	int index;
 
 	for (int i = 0; i < 64; i++) {
