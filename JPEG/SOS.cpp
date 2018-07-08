@@ -213,6 +213,24 @@ int matrix_rgba_dump(uint8_t *matrix)
 	return 0;
 }
 
+// TODO optimize
+uint8_t YC2RGB_Value_Convert(int tmp)
+{
+	uint32_t value;
+
+	value = ((uint32_t)tmp) & 0x3FF;
+
+	if (value & 0x200) {
+		return 0x0;
+	}
+	else if (value & 0x100) {
+		return 0xFF;
+	}
+	else {
+		return value & 0xFF;
+	}
+}
+
 // TODO Refer to figure
 int YCbCr_to_RGB_411(uint8_t *YCbCr, uint8_t *RGB)
 {
@@ -241,9 +259,9 @@ int YCbCr_to_RGB_411(uint8_t *YCbCr, uint8_t *RGB)
 			Cr = Cr_buf[C_index] - 128;
 
 			// SEQ: RGB, BMP SEQ: BGR
-			RGB[y * 16 * 3 + x * 3 + 0] = (uint8_t)(Y + ((int)(1.402 * 1024) * Cr) / 1024);
-			RGB[y * 16 * 3 + x * 3 + 1] = (uint8_t)(Y - ((int)(0.344 * 1024) * Cb + (int)(0.714 * 1024) * Cr) / 1024); // TODO
-			RGB[y * 16 * 3 + x * 3 + 2] = (uint8_t)(Y + ((int)(1.772 * 1024) * Cb) / 1024);
+			RGB[y * 16 * 3 + x * 3 + 0] = YC2RGB_Value_Convert(Y + ((int)(1.402 * 1024) * Cr) / 1024);
+			RGB[y * 16 * 3 + x * 3 + 1] = YC2RGB_Value_Convert(Y - ((int)(0.344 * 1024) * Cb + (int)(0.714 * 1024) * Cr) / 1024);
+			RGB[y * 16 * 3 + x * 3 + 2] = YC2RGB_Value_Convert(Y + ((int)(1.772 * 1024) * Cb) / 1024);
 		}
 	}
 
