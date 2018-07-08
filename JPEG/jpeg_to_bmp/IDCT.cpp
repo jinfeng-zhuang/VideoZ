@@ -6,8 +6,7 @@
 
 #define BYTECLIP(v) Clip8[(unsigned int)(v) & 0x3FF]
 
-static
-const unsigned char Clip8[1024] = {
+static const unsigned char Clip8[1024] = {
 	/* 0..255 */
 	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
 	32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63,
@@ -46,7 +45,7 @@ const unsigned char Clip8[1024] = {
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
-void block_idct(int* src, unsigned char* dst)
+void jpeg_block_idct(int* src, unsigned char* dst)
 {
 	const int M13 = (int)(1.41421 * 4096), M2 = (int)(1.08239 * 4096), M4 = (int)(2.61313 * 4096), M5 = (int)(1.84776 * 4096);
 	int v0, v1, v2, v3, v4, v5, v6, v7;

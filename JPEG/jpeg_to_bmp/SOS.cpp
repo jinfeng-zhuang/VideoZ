@@ -1,5 +1,3 @@
-#include "stdafx.h"
-
 #include "jpeg_section.h"
 
 #define BIT(n)	(1<<(n))
@@ -34,7 +32,7 @@ int huffman_encoded_data_scan(uint8_t *sos_data_area, uint32_t *offset, struct h
 		code_width = i + 1;
 
 		// TODO reconstruct the huffman_table for common usage
-		ret = huffman_table_search(db, index, code_width, code, &symbol);
+		ret = jpeg_huffman_tree_search(db, index, code_width, code, &symbol);
 		if (0 == ret) {
 			break;
 		}
@@ -76,7 +74,7 @@ int rof_decode(uint8_t *sos_data_area, uint32_t *offset, struct huffman_db *db, 
 		huffman_code = (huffman_code << 1) | bit;
 	}
 
-	int dc_ac_value = canonical_huffman_decode(bits_to_be_read, huffman_code);
+	int dc_ac_value = jpeg_canonical_huffman_decode(bits_to_be_read, huffman_code);
 
 	*zeros = zero_before_it;
 	*value = dc_ac_value;
@@ -276,12 +274,12 @@ int sos_mcu_block_dequan(int *matrix, int quan_id, uint8_t *matrix_dst)
 {
 	int ret;
 
-	ret = quantization_apply(matrix, matrix_quan, quan_id);
+	ret = jpeg_inverse_quantization(matrix, matrix_quan, quan_id);
 	assert(0 == ret);
 
 	matrix_dump("De-Quantization Matrix", matrix_quan);
 
-	block_idct(matrix_quan, matrix_dst);
+	jpeg_block_idct(matrix_quan, matrix_dst);
 
 	matrix_dump_8("IDCT result", matrix_dst);
 
@@ -313,7 +311,7 @@ int sos_mcu_parse(uint8_t *sos_data_area, uint32_t *offset)
 	return 0;
 }
 
-int sos_analyze(uint8_t *buffer, uint32_t length)
+int jpeg_sos_decode(uint8_t *buffer, uint32_t length)
 {
 	assert(NULL != buffer);
 
@@ -332,7 +330,7 @@ int sos_analyze(uint8_t *buffer, uint32_t length)
 	assert(3 == sos->color_component_number);
 
 	// FIX SOS ISSUE, REMOVE 0xFF
-	for (int i = 0, j = 0; i<length; i++, j++) {
+	for (uint32_t i = 0, j = 0; i<length; i++, j++) {
 		buffer[j] = buffer[i];
 		//if ((0xFF == buffer[i]) && (0x00 == buffer[i + 1])) {
 		if ((0xFF == buffer[i]) && (JPEG_SECTION_SOS != buffer[i + 1])) {

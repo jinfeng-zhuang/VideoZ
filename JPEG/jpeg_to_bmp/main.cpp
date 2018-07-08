@@ -1,46 +1,13 @@
 // MY.cpp : Defines the entry point for the console application.
 //
 
-#include "stdafx.h"
-
 #include "jpeg_section.h"
+#include "bmp_codec.h"
 
 #define FRAME_WIDTH		(128)
 #define FRAME_HEIGHT	(128)
 #define FRAME_SIZE		(FRAME_WIDTH * FRAME_HEIGHT * 3)
 uint8_t frame[FRAME_SIZE] = { 0 };
-
-int write_bmp_header(FILE *fp)
-{
-	assert(NULL != fp);
-
-	int ret;
-
-	struct bmp_file_header file;
-	struct bmp_image_header image;
-
-	memset(&file, 0, sizeof(struct bmp_file_header));
-	memset(&image, 0, sizeof(struct bmp_image_header));
-
-	file.type = 'MB';
-	file.size = sizeof(file) + sizeof(image) + FRAME_SIZE;
-	file.rgb_offset = sizeof(file) + sizeof(image);
-
-	image.header_size = sizeof(image);
-	image.width = FRAME_WIDTH;
-	image.height = FRAME_HEIGHT;
-	image.planes = 1;
-	image.bits_per_pixel = 24;
-	image.compress = 0;
-
-	ret = fwrite(&file, 1, sizeof(file), fp);
-	assert(ret == sizeof(file));
-
-	ret = fwrite(&image, 1, sizeof(image), fp);
-	assert(ret == sizeof(image));
-
-	return 0;
-}
 
 // assume
 // put 16x16 block to a container
@@ -123,33 +90,33 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	for (uint32_t i = 0; i < section_number; i++) {
 		if (JPEG_SECTION_SOF == sections[i].type) {
-			ret = SOF_Analyze(sections[i].buffer, sections[i].length);
+			ret = jpeg_sof_decode(sections[i].buffer, sections[i].length);
 			assert(0 == ret);
 		}
 	}
 
 	for (uint32_t i = 0; i < section_number; i++) {
 		if (JPEG_SECTION_DQT == sections[i].type) {
-			ret = quantization_resume(sections[i].buffer, sections[i].length);
+			ret = jpeg_dqt_decode(sections[i].buffer, sections[i].length);
 			assert(0 == ret);
 		}
 	}
 
 	for (uint32_t i = 0; i < section_number; i++) {
 		if (JPEG_SECTION_DHT == sections[i].type) {
-			ret = huffman_decoder(sections[i].buffer, sections[i].length, &huffman_table);
+			ret = jpeg_dht_decode(sections[i].buffer, sections[i].length, &huffman_table);
 			assert(0 == ret);
 		}
 	}
 
 	for (uint32_t i = 0; i < section_number; i++) {
 		if (JPEG_SECTION_SOS == sections[i].type) {
-			ret = sos_analyze(sections[i].buffer, sections[i].length);
+			ret = jpeg_sos_decode(sections[i].buffer, sections[i].length);
 			assert(0 == ret);
 		}
 	}
 
-	ret = write_bmp_header(fp);
+	ret = bmp_prepare_header(fp, FRAME_WIDTH, FRAME_HEIGHT);
 	assert(0 == ret);
 
 	ret = tranverse(frame);

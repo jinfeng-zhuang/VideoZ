@@ -1,8 +1,12 @@
-#include "stdafx.h"
-
 #include "jpeg_section.h"
 
-int huffman_code_to_bitstream(int bitwidth, uint16_t code, uint8_t *bitstream)
+struct huffman_db huffman_table = {
+	4,
+	{ 0x00, 0x01, 0x10, 0x11 },
+	{ NULL, NULL, NULL, NULL }
+};
+
+static int huffman_code_to_bitstream(int bitwidth, uint16_t code, uint8_t *bitstream)
 {
 	assert(NULL != bitstream);
 
@@ -17,7 +21,29 @@ int huffman_code_to_bitstream(int bitwidth, uint16_t code, uint8_t *bitstream)
 	return 0;
 }
 
-int huffman_decoder(uint8_t *buffer, uint32_t length, struct huffman_db *db)
+static int huffman_table_dump(struct huffman_db *db, uint8_t index)
+{
+	assert(NULL != db);
+
+	int real_index;
+
+	for (int i = 0; i < db->number; i++) {
+		if (db->index[i] == index) {
+			real_index = i;
+		}
+	}
+
+	printf("------------------------------------------\n");
+	printf("SYMBOL\t Bit(s)\t HuffmanCode\n");
+	for (int j = 0; j < db->symbol_number[real_index]; j++) {
+		printf("%02x\t %d\t %s\n", db->symbol[real_index][j].symbol, db->symbol[real_index][j].bit_width, db->symbol[real_index][j].huffman_bitstream);
+	}
+	printf("------------------------------------------\n");
+
+	return 0;
+}
+
+int jpeg_dht_decode(uint8_t *buffer, uint32_t length, struct huffman_db *db)
 {
 	assert(NULL != buffer);
 	assert(0 != length);
@@ -80,29 +106,7 @@ int huffman_decoder(uint8_t *buffer, uint32_t length, struct huffman_db *db)
 	return 0;
 }
 
-int huffman_table_dump(struct huffman_db *db, uint8_t index)
-{
-	assert(NULL != db);
-
-	int real_index;
-
-	for (int i = 0; i < db->number; i++) {
-		if (db->index[i] == index) {
-			real_index = i;
-		}
-	}
-
-	printf("------------------------------------------\n");
-	printf("SYMBOL\t Bit(s)\t HuffmanCode\n");
-		for (int j = 0; j < db->symbol_number[real_index]; j++) {
-			printf("%02x\t %d\t %s\n", db->symbol[real_index][j].symbol, db->symbol[real_index][j].bit_width, db->symbol[real_index][j].huffman_bitstream);
-	}
-	printf("------------------------------------------\n");
-
-	return 0;
-}
-
-int huffman_table_search(struct huffman_db *db, uint8_t index, int huffman_code_width, uint16_t huffman_code, uint8_t *symbol)
+int jpeg_huffman_tree_search(struct huffman_db *db, uint8_t index, int huffman_code_width, uint16_t huffman_code, uint8_t *symbol)
 {
 	assert(NULL != db);
 	assert(NULL != symbol);
@@ -133,7 +137,7 @@ end:
 	return 0;
 }
 
-int canonical_huffman_decode(uint8_t bit_width, uint16_t huffman_code)
+int jpeg_canonical_huffman_decode(uint8_t bit_width, uint16_t huffman_code)
 {
 	int value;
 

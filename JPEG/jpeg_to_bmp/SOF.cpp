@@ -1,8 +1,6 @@
-#include "stdafx.h"
-
 #include "jpeg_section.h"
 
-int SOF_Analyze(uint8_t *buffer, uint32_t length)
+int jpeg_sof_decode(uint8_t *buffer, uint32_t length)
 {
 	assert(NULL != buffer);
 

@@ -1,9 +1,3 @@
-#include "stdafx.h"
-#include <stdio.h>
-#include <stdint.h>
-#include <assert.h>
-#include <stdlib.h>
-
 #include "jpeg_section.h"
 
 struct jpeg_flag {
