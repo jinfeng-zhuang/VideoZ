@@ -41,7 +41,8 @@ struct marker_sos {
 struct jpeg_marker_dht {
 	uint16_t flag;
 	uint16_t length;
-	uint8_t huffman_table_index;
+	uint8_t id : 4;
+	uint8_t ac_dc : 4;
 	uint8_t number_of_level[16];
 	uint8_t data[1];
 };

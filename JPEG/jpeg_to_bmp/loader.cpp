@@ -3,7 +3,6 @@
  *		1. can't apply to file size > 2.1G
  */
 
-#include "stdafx.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <assert.h>

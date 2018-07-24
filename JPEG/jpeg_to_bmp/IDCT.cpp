@@ -1,4 +1,20 @@
-#include "stdafx.h"
+#include <stdio.h>
+
+int matrix_dump_8(const char *title, unsigned char *buffer)
+{
+	printf("\n%s\n", title);
+
+	for (int i = 0; i < 8; i++) {
+		for (int j = 0; j < 8; j++) {
+			printf("%02x ", buffer[i * 8 + j]);
+		}
+		printf("\n");
+	}
+
+	printf("\n");
+
+	return 0;
+}
 
 /*---------------------------------------------*/
 /* Conversion table for fast clipping process  */
@@ -45,12 +61,13 @@ static const unsigned char Clip8[1024] = {
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
-void jpeg_block_idct(int* src, unsigned char* dst)
+void jpeg_block_idct(int *src, unsigned char *dst)
 {
 	const int M13 = (int)(1.41421 * 4096), M2 = (int)(1.08239 * 4096), M4 = (int)(2.61313 * 4096), M5 = (int)(1.84776 * 4096);
 	int v0, v1, v2, v3, v4, v5, v6, v7;
 	int t10, t11, t12, t13;
 	unsigned int i;
+	unsigned char *dst_backup = dst;
 
 	/* Process columns */
 	for (i = 0; i < 8; i++) {
@@ -145,4 +162,6 @@ void jpeg_block_idct(int* src, unsigned char* dst)
 
 		src += 8;	/* Next row */
 	}
+
+	matrix_dump_8("idct", dst_backup);
 }

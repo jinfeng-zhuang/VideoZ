@@ -22,13 +22,13 @@ static const uint16_t IPSF[64] = {
 static struct jpeg_marker_dqt *dqt = NULL;
 static int quantization_table[4][64];
 
-static int dqt_dump(const char *title, int *buffer)
+static int matrix_dump(const char *title, int *buffer)
 {
 	printf("\n%s\n", title);
 
 	for (int i = 0; i < 8; i++) {
 		for (int j = 0; j < 8; j++) {
-			printf("%d ", buffer[i * 8 + j]);
+			printf("%d\t", buffer[i * 8 + j]);
 		}
 		printf("\n");
 	}
@@ -38,12 +38,15 @@ static int dqt_dump(const char *title, int *buffer)
 	return 0;
 }
 
-int jpeg_dqt_decode(uint8_t *buffer, uint32_t length)
+int jpeg_dqt_decode(uint8_t *buffer, uint32_t length, struct jpeg_decoder *info)
 {
 	assert(NULL != buffer);
+	assert(NULL != info);
 
 	int id;
 	dqt = (struct jpeg_marker_dqt *)buffer;
+
+	assert(BIGENDIAN_16(dqt->length) + 2 == length);
 
 	assert(0 == dqt->table[0].precision);
 
@@ -56,25 +59,28 @@ int jpeg_dqt_decode(uint8_t *buffer, uint32_t length)
 
 	for (int i = 0; i < 64; i++) {
 		index = zigzag_array_reverse[i];
-		quantization_table[id][index] = (int32_t)((uint32_t)dqt->table[0].data[i] * IPSF[index]); // TODO
+		info->quantization_table[id][index] = (int32_t)((uint32_t)dqt->table[0].data[i] * IPSF[index]); // TODO
 		//quantization_table[id][i] = (int32_t)((uint32_t)dqt->table[0].data[i] * IPSF[i]); // TODO
 	}
 
 	return 0;
 }
 
-int jpeg_inverse_quantization(int *src, int *dst, int quan_id)
+int jpeg_inverse_quantization(int *src, int *dst, int *table)
 {
 	assert(NULL != src);
-	assert(quan_id < 4);
-	assert(NULL != dqt);
+	assert(NULL != dst);
+	assert(NULL != table);
 
-	dqt_dump("DQT", quantization_table[quan_id]);
+	matrix_dump("DQT", table);
 
+	// TODO
 	for (int i = 0; i < 64; i++) {
 		int index = zigzag_array_reverse[i];
-		dst[index] = src[i] * quantization_table[quan_id][index] >> 8;
+		dst[index] = src[i] * table[index] >> 8;
 	}
+
+	matrix_dump("de-quantization", dst);
 
 	return 0;
 }

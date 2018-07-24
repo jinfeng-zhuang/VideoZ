@@ -16,75 +16,88 @@ int bitshift(const uint8_t *src, uint32_t *position)
 	return value ? 1 : 0;
 }
 
-int huffman_encoded_data_scan(uint8_t *sos_data_area, uint32_t *offset, struct huffman_db *db, uint8_t index, uint8_t *value)
+int huffman_decode_one_by_one(
+	uint8_t *bitstream,
+	uint32_t *offset,
+	struct huffman_tree *tree,
+	uint8_t *value
+	)
 {
-	int i;
-	int bit;
-	uint16_t code = 0; /* start from 0 */ 
-	uint8_t code_width;
-	int ret;
-	uint8_t symbol;
-
-	for (i = 0; i < 16; i++) {
-		bit = bitshift(sos_data_area, offset);
-
-		code = (code << 1) + bit;
-		code_width = i + 1;
-
-		// TODO reconstruct the huffman_table for common usage
-		ret = jpeg_huffman_tree_search(db, index, code_width, code, &symbol);
-		if (0 == ret) {
-			break;
-		}
-	}
-
-	if (i >= 16) {
-		return -1;
-	}
-
-	*value = symbol;
-
-	return 0;
-}
-
-// TODO correct the function name
-int rof_decode(uint8_t *sos_data_area, uint32_t *offset, struct huffman_db *db, uint8_t index, int *zeros, int *value)
-{
-	assert(NULL != sos_data_area);
+	assert(NULL != bitstream);
 	assert(NULL != offset);
-	assert(NULL != db);
+	assert(NULL != tree);
 	assert(NULL != value);
 
 	int ret;
+	uint16_t code;
+	uint8_t code_width;
 	uint8_t symbol;
 
-	ret = huffman_encoded_data_scan(sos_data_area, offset, db, index, &symbol);
-	assert(0 == ret);
+	code = 0;
 
-	if (0x00 == symbol) {
-		return 1; // COMPLETE
+	for (int i = 0; i < 16; i++) {
+		code = (code << 1) + bitshift(bitstream, offset);
+		code_width = i + 1;
+
+		ret = jpeg_huffman_tree_search(tree, code_width, code, &symbol);
+		if (0 == ret) {
+			*value = symbol;
+			return 0;
+		}
 	}
 
-	int zero_before_it = (symbol >> 4) & 0xF;
-	int bits_to_be_read = symbol & 0xF;
-	uint16_t huffman_code = 0;
+	printf("[SOS] huffman code width = %d, code = %x\n", code_width, code);
+
+	return -1;
+}
+
+// TODO correct the function name
+int huffman_and_rle_decode(
+	uint8_t *bitstream,
+	uint32_t *offset,
+	struct huffman_tree *tree,
+	uint8_t *huffman_value,
+	int *canonical_huffman_value
+	)
+{
+	assert(NULL != bitstream);
+	assert(NULL != offset);
+	assert(NULL != tree);
+	assert(NULL != huffman_value);
+	assert(NULL != canonical_huffman_value);
+
+	int ret;
+	uint8_t value;
+	int zero_count;
+	int bits_to_be_read;
+	uint16_t huffman_code;
+	int dc_ac_value = 0;
+
+	ret = huffman_decode_one_by_one(bitstream, offset, tree, &value);
+	assert(0 == ret);
+
+	if (0x00 == value) {
+		goto complete;
+	}
+
+	zero_count = (value >> 4) & 0xF;
+
+	bits_to_be_read = value & 0xF;
+	huffman_code = 0;
 
 	for (int j = 0; j < bits_to_be_read; j++) {
-		int bit = bitshift(sos_data_area, offset);
+		int bit = bitshift(bitstream, offset);
 		huffman_code = (huffman_code << 1) | bit;
 	}
 
-	int dc_ac_value = jpeg_canonical_huffman_decode(bits_to_be_read, huffman_code);
+	dc_ac_value = jpeg_canonical_huffman_decode(bits_to_be_read, huffman_code);
 
-	*zeros = zero_before_it;
-	*value = dc_ac_value;
+complete:
+	*huffman_value = value;
+	*canonical_huffman_value = dc_ac_value;
 
 	return 0;
 }
-
-int matrix[64];
-int matrix_reverse[64]; // TODO
-int matrix_quan[64];
 
 uint8_t zigzag_array[64] = {
 	1,  2,  6,  7, 15, 16, 28, 29,
@@ -125,75 +138,62 @@ int matrix_dump(const char *title, int *buffer)
 	return 0;
 }
 
-int matrix_dump_8(const char *title, unsigned char *buffer)
+int sos_mcu_block_dehuffman(
+	uint8_t *src,
+	uint32_t *offset,
+	struct huffman_tree *dc,
+	struct huffman_tree *ac,
+	int *prev_dc_value,
+	int *dst
+	)
 {
-	printf("\n%s\n", title);
-
-	for (int i = 0; i < 8; i++) {
-		for (int j = 0; j < 8; j++) {
-			printf("%02x ", buffer[i * 8 + j]);
-		}
-		printf("\n");
-	}
-
-	printf("\n");
-
-	return 0;
-}
-
-int sos_mcu_block_dehuffman(uint8_t *sos_data_area, uint32_t *offset, struct huffman_db *db, uint8_t huffman_tree_id, int color)
-{
-	assert(color < 4);
+	assert(NULL != src);
+	assert(NULL != dst);
+	assert(NULL != offset);
+	assert(NULL != dc);
+	assert(NULL != ac);
 
 	int ret;
-	int zeros;
-	int value;
-	static int previous_dc_value_array[3] = { 0,0,0 };
+	uint8_t huffman_value;
+	int canonical_huffman_value;
 
-	// TAKE ATTENTION,  sizeof(matrix)
-	memset(matrix, 0, sizeof(matrix));
+	// TAKE ATTENTION
+	memset(dst, 0, sizeof(int) * 64);
 
 	// 1 DC coefficient
-	ret = rof_decode(sos_data_area, offset, db, huffman_tree_id | 0x00, &zeros, &value);
-	if (-1 == ret) {
-		assert(0); // TODO
+	ret = huffman_and_rle_decode(src, offset, dc, &huffman_value, &canonical_huffman_value);
+	assert(0 == ret);
+
+	if (0x00 == huffman_value) {
+		canonical_huffman_value = 0;
 	}
 
-	// TODO
-	if (1 == ret) {
-		value = 0;
-	}
-
-	value = value + previous_dc_value_array[color];
-	previous_dc_value_array[color] = value;
-	matrix[0] = value;
+	canonical_huffman_value = canonical_huffman_value + *prev_dc_value;
+	*prev_dc_value = canonical_huffman_value;
+	dst[0] = canonical_huffman_value;
 
 	// 63 AC coefficient
 	for (int i = 1; i < 64; i++) {
-		ret = rof_decode(sos_data_area, offset, db, huffman_tree_id | 0x10, &zeros, &value);
-		if (-1 == ret) {
-			assert(0); // TODO
-		}
-		else if (1 == ret) {
+		ret = huffman_and_rle_decode(src, offset, ac, &huffman_value, &canonical_huffman_value);
+		assert(0 == ret);
+
+		if (0x00 == huffman_value) {
+			canonical_huffman_value = 0;
 			goto complete;
 		}
 
-		i = i + zeros;
+		i = i + ((huffman_value & 0xFF) >> 4);
 
 		// note: matrix init as 0
-		matrix[i] = value;
+		dst[i] = canonical_huffman_value;
 	}
 
 complete:
 
-	matrix_dump("Original Matrix", matrix);
+	matrix_dump("Original Matrix", dst);
 
 	return 0;
 }
-
-unsigned char matrix_idct[8*8];
-uint8_t matrix_ycbcr[64 * 6];
-unsigned char matrix_rgba[16*16 * 3];
 
 int matrix_rgba_dump(uint8_t *matrix)
 {
@@ -270,53 +270,168 @@ int YCbCr_to_RGB_411(uint8_t *YCbCr, uint8_t *RGB)
 	return 0;
 }
 
-int sos_mcu_block_dequan(int *matrix, int quan_id, uint8_t *matrix_dst)
+int YCbCr_to_RGB_211(uint8_t *YCbCr, uint8_t *RGB)
 {
-	int ret;
+	assert(NULL != YCbCr);
+	assert(NULL != RGB);
 
-	ret = jpeg_inverse_quantization(matrix, matrix_quan, quan_id);
-	assert(0 == ret);
+	uint8_t *Y_buf_array[2] = { YCbCr, YCbCr + 64};
+	uint8_t *Y_buf;
+	uint8_t *Cb_buf = YCbCr + 64 * 2;
+	uint8_t *Cr_buf = YCbCr + 64 * 3;
 
-	matrix_dump("De-Quantization Matrix", matrix_quan);
+	int C_index;
+	int Y_index;
 
-	jpeg_block_idct(matrix_quan, matrix_dst);
+	int Y, Cb, Cr;
 
-	matrix_dump_8("IDCT result", matrix_dst);
+	for (int y = 0; y < 8; y++) {
+		for (int x = 0; x < 16; x++) {
+			Y_buf = Y_buf_array[x / 8];
+
+			Y_index = (y % 8) * 8 + (x % 8);
+			C_index = y * 8 + (x >> 1);
+
+			Y = Y_buf[Y_index];
+			Cb = Cb_buf[C_index] - 128; // TODO -128
+			Cr = Cr_buf[C_index] - 128;
+
+			// SEQ: RGB, BMP SEQ: BGR
+			RGB[y * 16 * 3 + x * 3 + 0] = YC2RGB_Value_Convert(Y + ((int)(1.402 * 1024) * Cr) / 1024);
+			RGB[y * 16 * 3 + x * 3 + 1] = YC2RGB_Value_Convert(Y - ((int)(0.344 * 1024) * Cb + (int)(0.714 * 1024) * Cr) / 1024);
+			RGB[y * 16 * 3 + x * 3 + 2] = YC2RGB_Value_Convert(Y + ((int)(1.772 * 1024) * Cb) / 1024);
+		}
+	}
+
+	matrix_rgba_dump(RGB);
+
+	output(RGB);
 
 	return 0;
 }
 
-int sos_mcu_parse(uint8_t *sos_data_area, uint32_t *offset)
+int YCbCr_to_RGB_111(uint8_t *YCbCr, uint8_t *RGB)
 {
-	sos_mcu_block_dehuffman(sos_data_area, offset, &huffman_table, HUFFMAN_TREE_ID_0, 0);
-	sos_mcu_block_dequan(matrix, 0, &matrix_ycbcr[64 * 0]);
+	assert(NULL != YCbCr);
+	assert(NULL != RGB);
 
-	sos_mcu_block_dehuffman(sos_data_area, offset, &huffman_table, HUFFMAN_TREE_ID_0, 0);
-	sos_mcu_block_dequan(matrix, 0, &matrix_ycbcr[64 * 1]);
+	uint8_t *Y_buf_array[1] = { YCbCr };
+	uint8_t *Y_buf;
+	uint8_t *Cb_buf = YCbCr + 64 * 1;
+	uint8_t *Cr_buf = YCbCr + 64 * 2;
 
-	sos_mcu_block_dehuffman(sos_data_area, offset, &huffman_table, HUFFMAN_TREE_ID_0, 0);
-	sos_mcu_block_dequan(matrix, 0, &matrix_ycbcr[64 * 2]);
+	int C_index;
+	int Y_index;
 
-	sos_mcu_block_dehuffman(sos_data_area, offset, &huffman_table, HUFFMAN_TREE_ID_0, 0);
-	sos_mcu_block_dequan(matrix, 0, &matrix_ycbcr[64 * 3]);
+	int Y, Cb, Cr;
 
-	sos_mcu_block_dehuffman(sos_data_area, offset, &huffman_table, HUFFMAN_TREE_ID_1, 1);
-	sos_mcu_block_dequan(matrix, 1, &matrix_ycbcr[64 * 4]);
+	for (int y = 0; y < 8; y++) {
+		for (int x = 0; x < 8; x++) {
+			Y_buf = YCbCr;
 
-	sos_mcu_block_dehuffman(sos_data_area, offset, &huffman_table, HUFFMAN_TREE_ID_1, 2);
-	sos_mcu_block_dequan(matrix, 1, &matrix_ycbcr[64 * 5]);
+			Y_index = y * 8 + x;
+			C_index = y * 8 + x;
 
-	YCbCr_to_RGB_411(matrix_ycbcr, matrix_rgba);
+			Y = Y_buf[Y_index];
+			Cb = Cb_buf[C_index] - 128; // TODO -128
+			Cr = Cr_buf[C_index] - 128;
+
+			// SEQ: RGB, BMP SEQ: BGR
+			RGB[y * 8 * 3 + x * 3 + 0] = YC2RGB_Value_Convert(Y + ((int)(1.402 * 1024) * Cr) / 1024);
+			RGB[y * 8 * 3 + x * 3 + 1] = YC2RGB_Value_Convert(Y - ((int)(0.344 * 1024) * Cb + (int)(0.714 * 1024) * Cr) / 1024);
+			RGB[y * 8 * 3 + x * 3 + 2] = YC2RGB_Value_Convert(Y + ((int)(1.772 * 1024) * Cb) / 1024);
+		}
+	}
+
+	matrix_rgba_dump(RGB);
+
+	output(RGB);
 
 	return 0;
 }
 
-int jpeg_sos_decode(uint8_t *buffer, uint32_t length)
+static int matrix_dehuffman[64];
+static int matrix_dequantization[64];
+static uint8_t matrix_idct[6][64];
+
+static uint8_t matrix_rgb[16*16*3];
+
+static int previous_dc_value[3] = { 0, 0, 0 };
+
+int sos_mcu_parse(uint8_t *bitstream, uint32_t *offset, struct jpeg_decoder *info)
+{
+	int tree_id;
+	int quant_id;
+	struct huffman_tree *dc_tree;
+	struct huffman_tree *ac_tree;
+	int *quant_table;
+
+	// YYYY
+	tree_id = info->color_to_huffman[0];
+	quant_id = info->color_to_quant[0];
+	dc_tree = &info->huffman_tree[tree_id][0];
+	ac_tree = &info->huffman_tree[tree_id][1];
+	if (0 == ac_tree->count) {
+		ac_tree = dc_tree;
+	}
+	quant_table = info->quantization_table[quant_id];
+
+	for (int i = 0; i < info->Y_number; i++) {
+		sos_mcu_block_dehuffman(bitstream, offset, dc_tree, ac_tree, &previous_dc_value[0], matrix_dehuffman);
+		jpeg_inverse_quantization(matrix_dehuffman, matrix_dequantization, quant_table);
+		jpeg_block_idct(matrix_dequantization, matrix_idct[i]);
+	}
+
+	//CB
+	tree_id = info->color_to_huffman[1];
+	quant_id = info->color_to_quant[1];
+	dc_tree = &info->huffman_tree[tree_id][0];
+	assert(0 != dc_tree->count);
+	ac_tree = &info->huffman_tree[tree_id][1];
+	assert(0 != ac_tree->count);
+	quant_table = info->quantization_table[quant_id];
+
+	sos_mcu_block_dehuffman(bitstream, offset, dc_tree, ac_tree, &previous_dc_value[1], matrix_dehuffman);
+	jpeg_inverse_quantization(matrix_dehuffman, matrix_dequantization, quant_table);
+	jpeg_block_idct(matrix_dequantization, matrix_idct[info->Y_number]);
+
+	//CR
+	tree_id = info->color_to_huffman[2];
+	quant_id = info->color_to_quant[2];
+	dc_tree = &info->huffman_tree[tree_id][0];
+	assert(0 != dc_tree->count);
+	ac_tree = &info->huffman_tree[tree_id][1];
+	assert(0 != ac_tree->count);
+	quant_table = info->quantization_table[quant_id];
+
+	sos_mcu_block_dehuffman(bitstream, offset, dc_tree, ac_tree, &previous_dc_value[2], matrix_dehuffman);
+	jpeg_inverse_quantization(matrix_dehuffman, matrix_dequantization, quant_table);
+	jpeg_block_idct(matrix_dequantization, matrix_idct[info->Y_number+1]);
+
+	if (4 == info->Y_number) {
+		YCbCr_to_RGB_411((uint8_t *)matrix_idct, matrix_rgb);
+	}
+	else if (2 == info->Y_number) {
+		YCbCr_to_RGB_211((uint8_t *)matrix_idct, matrix_rgb);
+	}
+	else if (1 == info->Y_number) {
+		YCbCr_to_RGB_111((uint8_t *)matrix_idct, matrix_rgb);
+	}
+	else {
+		assert(0);
+	}
+
+	return 0;
+}
+
+int jpeg_sos_decode(uint8_t *buffer, uint32_t length, struct jpeg_decoder *info)
 {
 	assert(NULL != buffer);
 
 	int ret;
 	uint32_t bit_offset = 0;
+	int mcu_number_horizontal;
+	int mcu_number_vertical;
 	
 	printf("[SOS] section length = %d\n", length);
 
@@ -325,22 +440,42 @@ int jpeg_sos_decode(uint8_t *buffer, uint32_t length)
 	assert(0 == sos->start);
 	assert(0x3F == sos->stop);
 	assert(0 == sos->select);
-
-	/* only suppprt YCbCr */
 	assert(3 == sos->color_component_number);
+	assert(12 == BIGENDIAN_16(sos->length));
 
-	// FIX SOS ISSUE, REMOVE 0xFF
+	assert((0 == sos->color_component[0].id) || (1 == sos->color_component[0].id));
+	assert(0 == sos->color_component[0].huffman_table_ac_id);
+	assert(0 == sos->color_component[0].huffman_table_dc_id);
+
+	assert((1 == sos->color_component[1].id) || (2 == sos->color_component[1].id));
+	assert(1 == sos->color_component[1].huffman_table_ac_id);
+	assert(1 == sos->color_component[1].huffman_table_dc_id);
+
+	assert((2 == sos->color_component[2].id) || (3 == sos->color_component[2].id));
+	assert(1 == sos->color_component[2].huffman_table_ac_id);
+	assert(1 == sos->color_component[2].huffman_table_dc_id);
+
+	assert(sos->color_component[0].huffman_table_dc_id == sos->color_component[0].huffman_table_ac_id);
+	assert(sos->color_component[1].huffman_table_dc_id == sos->color_component[1].huffman_table_ac_id);
+	assert(sos->color_component[2].huffman_table_dc_id == sos->color_component[2].huffman_table_ac_id);
+
+	info->color_to_huffman[0] = sos->color_component[0].huffman_table_dc_id;
+	info->color_to_huffman[1] = sos->color_component[1].huffman_table_dc_id;
+	info->color_to_huffman[2] = sos->color_component[2].huffman_table_dc_id;
+
+	mcu_number_horizontal = (info->width / info->mcu_width) + (info->width % info->mcu_width ? 1 : 0);
+	mcu_number_vertical = (info->height / info->mcu_height) + (info->height % info->mcu_height ? 1 : 0);
+
 	for (uint32_t i = 0, j = 0; i<length; i++, j++) {
 		buffer[j] = buffer[i];
-		//if ((0xFF == buffer[i]) && (0x00 == buffer[i + 1])) {
 		if ((0xFF == buffer[i]) && (JPEG_SECTION_SOS != buffer[i + 1])) {
-			i++; // FIX ISSUE: FF 00 00 -> FF FF FF
+			i++; // TODO SKIP following 0, WHY
 		}
 	}
 
 	// TODO more MCUs
-	for (int i = 0; i < 64; i++) {
-		ret = sos_mcu_parse(sos->data, &bit_offset);
+	for (int i = 0; i < mcu_number_horizontal * mcu_number_vertical; i++) {
+		ret = sos_mcu_parse(sos->data, &bit_offset, info);
 		assert(0 == ret);
 	}
 
