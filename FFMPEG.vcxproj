@@ -18,6 +18,9 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\FFMPEG.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{F86B3ACE-18F6-4A46-8799-FCCEC2FDAB4C}</ProjectGuid>
@@ -77,8 +80,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>E:\ffmpeg\ffmpeg-20190614-dd357d7-win64-dev\include;$(IncludePath)</IncludePath>
-    <LibraryPath>E:\ffmpeg\ffmpeg-20190614-dd357d7-win64-dev\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>.\Source\include;$(IncludePath)</IncludePath>
+    <LibraryPath>.\Source\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -87,8 +90,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>E:\ffmpeg\ffmpeg-20190614-dd357d7-win64-dev\include;$(IncludePath)</IncludePath>
-    <LibraryPath>E:\ffmpeg\ffmpeg-20190614-dd357d7-win64-dev\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>.\Source\include;$(IncludePath)</IncludePath>
+    <LibraryPath>.\Source\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -162,9 +165,6 @@
       <AdditionalDependencies>avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="FFMPEG.cpp" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
