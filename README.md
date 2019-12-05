@@ -1,2 +1,3 @@
-# ffmpeg
-ffmpeg examples
+# VideoZ
+
+Process video related data.
