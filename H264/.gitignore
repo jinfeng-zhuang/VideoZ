@@ -1,0 +1,7 @@
+/Debug
+*.swp
+/.vs/
+*.opendb
+*.db
+*.suo
+*.ipch
