@@ -56,15 +56,9 @@ int main(int argc, char *argv[])
     //=========================================================================
 
     if (1 == argc) {
-        argc = 8;
-        argv[0] = (char*)"yuvbmp";
-        argv[1] = (char*)"-f";
-        argv[2] = (char*)"I420";
-        argv[3] = (char*)"-r";
-        argv[4] = (char*)"1920x1080";
-        argv[5] = (char*)"-c";
-        argv[6] = (char*)"10";
-        argv[7] = (char*)"test.h264.yuv";
+        printf("Usage: %s -f <format> -r <resolution> -c <frame count> <input file>\n", argv[0]);
+        printf("Example: %s -f I420 -r 1920x1080 -c 1 test_420.yuv\n", argv[0]);
+        return 0;
     }
 
     while ((opt = getopt(argc, argv, "f:r:c:")) != -1) {
