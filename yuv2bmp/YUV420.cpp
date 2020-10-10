@@ -34,3 +34,40 @@ unsigned char I420_V(int chroma_x, int chroma_y, int stride, int height, unsigne
 
     return value;
 }
+
+unsigned char NV12_Y(int chroma_x, int chroma_y, int stride, int height, unsigned char* frame_buffer)
+{
+    unsigned char value;
+
+    value = frame_buffer[stride * chroma_y + chroma_x];
+
+    return value;
+}
+
+unsigned char NV12_U(int chroma_x, int chroma_y, int stride, int height, unsigned char* frame_buffer)
+{
+    int x = chroma_x >> 1;
+    int y = chroma_y >> 1;
+
+    unsigned char* buffer = &frame_buffer[stride * height];
+
+    unsigned char value;
+
+    value = buffer[(stride) * y + x * 2 + 0];
+
+    return value;
+}
+
+unsigned char NV12_V(int chroma_x, int chroma_y, int stride, int height, unsigned char* frame_buffer)
+{
+    int x = chroma_x >> 1;
+    int y = chroma_y >> 1;
+
+    unsigned char* buffer = &frame_buffer[stride * height];
+
+    unsigned char value;
+
+    value = buffer[(stride) * y + x * 2 + 1];
+
+    return value;
+}

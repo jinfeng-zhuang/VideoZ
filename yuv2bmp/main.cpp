@@ -10,6 +10,10 @@ extern unsigned char I420_Y(int chroma_x, int chroma_y, int stride, int height, 
 extern unsigned char I420_U(int chroma_x, int chroma_y, int stride, int height, unsigned char* frame_buffer);
 extern unsigned char I420_V(int chroma_x, int chroma_y, int stride, int height, unsigned char* frame_buffer);
 
+extern unsigned char NV12_Y(int chroma_x, int chroma_y, int stride, int height, unsigned char* frame_buffer);
+extern unsigned char NV12_U(int chroma_x, int chroma_y, int stride, int height, unsigned char* frame_buffer);
+extern unsigned char NV12_V(int chroma_x, int chroma_y, int stride, int height, unsigned char* frame_buffer);
+
 #define WIDTH       1920
 #define HEIGHT      1080
 
@@ -33,6 +37,7 @@ void print_usage(void)
 enum format_e {
     FORMAT_NULL,
     FORMAT_I420,
+    FORMAT_NV12,
     FORMAT_I444,
 };
 
@@ -66,6 +71,9 @@ int main(int argc, char *argv[])
         case 'f':
             if (0 == strcmp(optarg, "I420")) {
                 format = FORMAT_I420;
+            }
+            else if (0 == strcmp(optarg, "NV12")) {
+                format = FORMAT_NV12;
             }
             else {
                 printf("Error: format \'%s\' not supported\n", optarg);
@@ -122,15 +130,24 @@ int main(int argc, char *argv[])
     //=========================================================================
 
     for (count = 0; count < frame_count; count++) {
-        if (frame_size != fread(yuv_buffer, 1, frame_size, fp))
+        if (frame_size != fread(yuv_buffer, 1, frame_size, fp)) {
+            printf("frame size not match\n");
             goto END;
+        }
 
         for (i = 0; i < HEIGHT; i++) {
             for (j = 0; j < WIDTH; j++) {
 
-                y = I420_Y(j, i, WIDTH, HEIGHT, yuv_buffer);
-                u = I420_U(j, i, WIDTH, HEIGHT, yuv_buffer);
-                v = I420_V(j, i, WIDTH, HEIGHT, yuv_buffer);
+                if (FORMAT_I420 == format) {
+                    y = I420_Y(j, i, WIDTH, HEIGHT, yuv_buffer);
+                    u = I420_U(j, i, WIDTH, HEIGHT, yuv_buffer);
+                    v = I420_V(j, i, WIDTH, HEIGHT, yuv_buffer);
+                }
+                else if (FORMAT_NV12 == format) {
+                    y = NV12_Y(j, i, WIDTH, HEIGHT, yuv_buffer);
+                    u = NV12_U(j, i, WIDTH, HEIGHT, yuv_buffer);
+                    v = NV12_V(j, i, WIDTH, HEIGHT, yuv_buffer);
+                }
 
                 // YUV TO RGB ================================================
                 r = 1.0 * y + 0 + 1.402 * (v - 128);
