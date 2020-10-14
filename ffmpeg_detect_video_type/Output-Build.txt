@@ -1,0 +1,12 @@
+﻿1>------ Build started: Project: ffmpeg_detect_video_type, Configuration: Debug Win32 ------
+1>main.cpp
+1>F:\Github\VideoZ\3rdparty\ffmpeg\include\libavutil\rational.h: warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+1>main.obj : error LNK2019: unresolved external symbol _av_dict_get referenced in function _main
+1>main.obj : error LNK2019: unresolved external symbol _avformat_open_input referenced in function _main
+1>main.obj : error LNK2019: unresolved external symbol _avformat_close_input referenced in function _main
+1>F:\Github\VideoZ\3rdparty\ffmpeg\lib\avformat.lib : warning LNK4272: library machine type 'x64' conflicts with target machine type 'x86'
+1>F:\Github\VideoZ\3rdparty\ffmpeg\lib\avutil.lib : warning LNK4272: library machine type 'x64' conflicts with target machine type 'x86'
+1>F:\Github\VideoZ\3rdparty\ffmpeg\lib\avcodec.lib : warning LNK4272: library machine type 'x64' conflicts with target machine type 'x86'
+1>F:\Github\VideoZ\Debug\ffmpeg_detect_video_type.exe : fatal error LNK1120: 3 unresolved externals
+1>Done building project "ffmpeg_detect_video_type.vcxproj" -- FAILED.
+========== Build: 0 succeeded, 1 failed, 0 up-to-date, 0 skipped ==========

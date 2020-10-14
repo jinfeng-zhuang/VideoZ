@@ -195,7 +195,7 @@ int FrameGenerator(void* arg)
     FrameGeneratorInit();
 
     while (1) {
-        decode_file("test.h264");
+        decode_file("../Material/test.h264");
         Sleep(3000);
     }
 }
