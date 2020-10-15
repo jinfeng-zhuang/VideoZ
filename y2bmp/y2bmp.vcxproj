@@ -18,6 +18,11 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="load_file.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="save_bgr_to_bmp.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{AA271D76-C724-413A-A877-1D5954220C26}</ProjectGuid>
@@ -142,11 +147,6 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="F:\Github\VSTools\app\malone_jpeg_luma_to_bmp\load_file.cpp" />
-    <ClCompile Include="F:\Github\VSTools\app\malone_jpeg_luma_to_bmp\main.cpp" />
-    <ClCompile Include="F:\Github\VSTools\app\malone_jpeg_luma_to_bmp\save_bgr_to_bmp.cpp" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

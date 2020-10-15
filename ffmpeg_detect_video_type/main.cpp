@@ -1,31 +1,3 @@
-/*
- * Copyright (c) 2011 Reinhard Tartler
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
-
- /**
-  * @file
-  * Shows how the metadata API can be used in application programs.
-  * @example metadata.c
-  */
-
 #include <stdio.h>
 
 extern "C" {
@@ -46,12 +18,25 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    // 如果用第三个参数传入码流信息，最好包含一帧数据，失败的情况下多读一些再调用该函数
     if ((ret = avformat_open_input(&fmt_ctx, argv[1], NULL, NULL)))
         return ret;
 
-    while ((tag = av_dict_get(fmt_ctx->metadata, "", tag, AV_DICT_IGNORE_SUFFIX)))
-        printf("%s=%s\n", tag->key, tag->value);
+    ret = avformat_find_stream_info(fmt_ctx, NULL);
+    if (ret < 0) {
+        printf("avformat_find_stream_info return %d\n", ret);
+        return -1;
+    }
+
+    av_dump_format(fmt_ctx, 0, "", 0);
+
+    for (int i = 0; i < fmt_ctx->nb_streams; i++) {
+        if (fmt_ctx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+            break;
+        }
+    }
 
     avformat_close_input(&fmt_ctx);
+
     return 0;
 }
