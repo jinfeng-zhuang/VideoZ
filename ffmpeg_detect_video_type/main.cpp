@@ -10,6 +10,8 @@ int main(int argc, char** argv)
     AVFormatContext* fmt_ctx = NULL;
     AVDictionaryEntry* tag = NULL;
     int ret;
+    AVPacket packet;
+    int video_stream_index_ = -1;
 
     if (argc != 2) {
         printf("usage: %s <input_file>\n"
@@ -32,7 +34,21 @@ int main(int argc, char** argv)
 
     for (int i = 0; i < fmt_ctx->nb_streams; i++) {
         if (fmt_ctx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+            video_stream_index_ = i;
             break;
+        }
+    }
+
+    // ref: xilixili.net/2018/08/20/ffmpeg-got-raw-h264/
+    // https://www.jianshu.com/p/21dfd64add77
+    while (av_read_frame(fmt_ctx, &packet) >= 0) {
+        if (packet.stream_index == video_stream_index_) {
+            printf("Video Package PTS %llx: %x %x %x %x\n", packet.pts,
+                packet.data[0],
+                packet.data[1],
+                packet.data[2],
+                packet.data[3]
+                );
         }
     }
 
