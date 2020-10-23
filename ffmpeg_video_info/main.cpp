@@ -39,7 +39,7 @@ int main(int argc, char** argv)
     fseek(output_fd, 0, SEEK_END);
 
     if (0 == ftell(output_fd)) {
-        fprintf(output_fd, "Filename, Type, Codec, Profile, Level, Resolution/Sample, Framerate, Bitrate (Kbps)\n");
+        fprintf(output_fd, "Filename, Type, Codec, Profile, Level, Resolution/Sample, Framerate, Bitrate (Kbps), Duration, Progressive\n");
     }
 
     fseek(output_fd, 0, SEEK_SET);
@@ -70,18 +70,22 @@ int main(int argc, char** argv)
                 int level = fmt_ctx->streams[i]->codecpar->level;
                 float rate = av_q2d(fmt_ctx->streams[i]->avg_frame_rate);
                 const char* profile = avcodec_profile_name(codec_id, fmt_ctx->streams[i]->codecpar->profile);
+                int64_t duration = fmt_ctx->duration;
+                int progressive = (fmt_ctx->streams[i]->codecpar->field_order == AV_FIELD_PROGRESSIVE) ? 1 : 0;
 
                 const AVCodecDescriptor* codec_desc = avcodec_descriptor_get(codec_id);
 
                 if (codec_desc) {
-                    fprintf(output_fd, "\"%s\", Video, %s, %s, %d, %dx%d, %f, %lld\n",
+                    fprintf(output_fd, "\"%s\", Video, %s, %s, %d, %dx%d, %f, %lld, %lld, %d\n",
                         input_file,
                         codec_desc->name,
                         profile,
                         level,
                         width, height,
                         rate,
-                        fmt_ctx->bit_rate>>10
+                        fmt_ctx->bit_rate>>10,
+                        duration,
+                        progressive
                         );
                 }
             }
