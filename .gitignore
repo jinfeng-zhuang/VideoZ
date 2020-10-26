@@ -1,11 +1,7 @@
-*/.vs/
 .vs/
-/Debug
-/x64
-*/x64/
-*/Debug/
+Debug/
+x64/
 
 *.db
 *.filters
 *.user
-*/.vs/
